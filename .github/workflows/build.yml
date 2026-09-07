@@ -63,7 +63,15 @@ jobs:
           export PSL1GHT=$PS3DEV
           export PATH=$PS3DEV/bin:$PS3DEV/ppu/bin:$PS3DEV/spu/bin:$PATH
           ls -R raylib-ps3/src/external 2>&1 | head -n 80
-          ls -lh raylib-ps3/src/external/khronos/KHR/ 2>&1 | head -n 20
+          ls -lh raylib-ps3/src/external/khronos/ 2>&1 | head -n 20
+          # fix missing KHR headers in fork - fetch from upstream raylib
+          if [ ! -f raylib-ps3/src/external/khronos/KHR/khrplatform.h ]; then
+            echo "KHR missing, fetching from upstream"
+            mkdir -p raylib-ps3/src/external/khronos/KHR
+            wget -q https://raw.githubusercontent.com/raysan5/raylib/master/src/external/khronos/KHR/khrplatform.h -O raylib-ps3/src/external/khronos/KHR/khrplatform.h
+            wget -q https://raw.githubusercontent.com/raysan5/raylib/master/src/external/khronos/EGL/egl.h -O /tmp/egl.h 2>&1 | head -n 5 || echo "egl fetch"
+            ls -lh raylib-ps3/src/external/khronos/KHR/ 2>&1 | head -n 20
+          fi
           cd raylib-ps3/src
           make PLATFORM=PLATFORM_PSL1GHT -j$(nproc) 2>&1 | tail -n 100
           echo "=== raylib build done ==="

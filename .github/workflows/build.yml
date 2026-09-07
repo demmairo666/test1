@@ -54,6 +54,7 @@ jobs:
         with:
           repository: nbe1233/raylib-ps3
           path: raylib-ps3
+          submodules: recursive
 
       - name: Build raylib for PS3
         run: |

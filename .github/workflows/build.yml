@@ -64,12 +64,21 @@ jobs:
           export PATH=$PS3DEV/bin:$PS3DEV/ppu/bin:$PS3DEV/spu/bin:$PATH
           ls -R raylib-ps3/src/external 2>&1 | head -n 80
           ls -lh raylib-ps3/src/external/khronos/ 2>&1 | head -n 20
-          # fix missing KHR headers in fork - fetch from upstream raylib
+          # fix missing KHR headers in fork - fetch from upstream raylib or use portlibs
           if [ ! -f raylib-ps3/src/external/khronos/KHR/khrplatform.h ]; then
-            echo "KHR missing, fetching from upstream"
+            echo "KHR missing, trying to fetch"
             mkdir -p raylib-ps3/src/external/khronos/KHR
-            wget -q https://raw.githubusercontent.com/raysan5/raylib/master/src/external/khronos/KHR/khrplatform.h -O raylib-ps3/src/external/khronos/KHR/khrplatform.h
-            wget -q https://raw.githubusercontent.com/raysan5/raylib/master/src/external/khronos/EGL/egl.h -O /tmp/egl.h 2>&1 | head -n 5 || echo "egl fetch"
+            # try portlibs first
+            if [ -f /usr/local/ps3dev/portlibs/ppu/include/KHR/khrplatform.h ]; then
+              cp -v /usr/local/ps3dev/portlibs/ppu/include/KHR/khrplatform.h raylib-ps3/src/external/khronos/KHR/
+            else
+              curl -L https://raw.githubusercontent.com/raysan5/raylib/master/src/external/khronos/KHR/khrplatform.h -o raylib-ps3/src/external/khronos/KHR/khrplatform.h 2>&1 | head -n 20 || echo "curl failed"
+              # fallback: create minimal stub
+              if [ ! -f raylib-ps3/src/external/khronos/KHR/khrplatform.h ]; then
+                echo "creating stub khrplatform.h"
+                printf "#ifndef KHRPLATFORM_H\n#define KHRPLATFORM_H\ntypedef char khronos_int8_t;\ntypedef unsigned char khronos_uint8_t;\ntypedef short khronos_int16_t;\ntypedef unsigned short khronos_uint16_t;\ntypedef int khronos_int32_t;\ntypedef unsigned int khronos_uint32_t;\ntypedef long long khronos_int64_t;\ntypedef unsigned long long khronos_uint64_t;\ntypedef float khronos_float_t;\n#endif\n" > raylib-ps3/src/external/khronos/KHR/khrplatform.h
+              fi
+            fi
             ls -lh raylib-ps3/src/external/khronos/KHR/ 2>&1 | head -n 20
           fi
           cd raylib-ps3/src

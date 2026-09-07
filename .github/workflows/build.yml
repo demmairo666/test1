@@ -36,12 +36,16 @@ jobs:
           export PSL1GHT=$PS3DEV
           export PATH=$PS3DEV/bin:$PS3DEV/ppu/bin:$PS3DEV/spu/bin:$PATH
           cd RSXGL
-          # RSXGL uses autotools - configure then make
-          if [ -f configure ]; then chmod +x configure; ./configure --with-ppu-prefix=$PS3DEV/portlibs/ppu || cat config.log; fi
-          make -j$(nproc) || make
-          sudo make install || sudo make install -k
+          ls -la | head -n 30
+          cat README* 2>&1 | head -n 40
+          if [ -f autogen.sh ]; then chmod +x autogen.sh; ./autogen.sh 2>&1 | head -n 50; fi
+          if [ ! -f configure ] && [ -f configure.ac ]; then autoreconf -ivf 2>&1 | head -n 50; fi
+          ls -la configure* 2>&1 | head -n 20
+          if [ -f configure ]; then chmod +x configure; ./configure --with-ppu-prefix=$PS3DEV/portlibs/ppu 2>&1 | tail -n 50; cat config.log 2>&1 | tail -n 100; fi
+          ls -la Makefile 2>&1 | head -n 20
+          make -j$(nproc) 2>&1 | tail -n 100 || make 2>&1 | tail -n 100
+          sudo make install 2>&1 | tail -n 50 || sudo make install -k 2>&1 | tail -n 50
           ls -lh /usr/local/ps3dev/portlibs/ppu/lib/libRSXGL* 2>&1 | head -n 20
-          ls -lh /usr/local/ps3dev/lib/*RSXGL* 2>&1 | head -n 20
           find /usr/local/ps3dev -name "*RSXGL*" 2>&1 | head -n 20
           find . -name "*.a" | head -n 20
 

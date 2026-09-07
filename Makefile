@@ -22,7 +22,7 @@ BINFILES    := $(foreach dir,$(DATA), $(wildcard $(dir)/*.bin))
 
 OBJS        := $(CFILES:.c=.o) $(CPPFILES:.cpp=.o) $(SFILES:.s=.o) $(BINFILES:.bin=.o)
 
-CFLAGS      := -O2 -Wall -mcpu=cell $(MACHDEP) -I$(PORTLIBS)/include -I$(INCLUDES)
+CFLAGS      := -O2 -Wall -mcpu=cell $(MACHDEP) $(LIBPSL1GHT_INC) -I$(PORTLIBS)/include -I$(INCLUDES)
 CXXFLAGS    := $(CFLAGS) -std=c++11
 LDFLAGS     := -L$(PORTLIBS)/lib -L$(PSL1GHT)/ppu/lib -L$(PS3DEV)/ppu/lib
 LIBS        := -ltiny3d -lfont -lfreetype -lgcm_sys -lrsx -lsysutil -lio -lsysmodule -lm

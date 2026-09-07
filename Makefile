@@ -1,61 +1,107 @@
-# Makefile для PSL1GHT / ps3dev
-# Требует: ppu-gcc, PSL1GHT, tiny3D, libfont
+#---------------------------------------------------------------------------------
+# Clear the implicit built in rules
+#---------------------------------------------------------------------------------
+.SUFFIXES:
+#---------------------------------------------------------------------------------
 ifeq ($(strip $(PSL1GHT)),)
-$(error "PSL1GHT not set. Установи ps3dev или запусти через docker ps3dev/ps3dev")
+$(error "Please set PSL1GHT in your environment. export PSL1GHT=<path>")
 endif
 
 include $(PSL1GHT)/ppu_rules
 
-TITLE       := STALKER PS3 Demo Extended
-APPID       := STALKERD01
-CONTENTID   := UP0001-$(APPID)_00-0000000000000000
+#---------------------------------------------------------------------------------
+# TARGET is the name of the output
+# BUILD is the directory where object files & intermediate files will be placed
+# SOURCES is a list of directories containing source code
+# INCLUDES is a list of directories containing extra header files
+#---------------------------------------------------------------------------------
+TARGET		:=	STALKERD01
+BUILD		:=	build
+SOURCES		:=	source
+DATA		:=	data
+INCLUDES	:=	include
 
-SOURCES     := source
-DATA        := data
-INCLUDES    := include
-SHADERS     :=
+TITLE		:=	STALKER PS3 Demo Extended
+APPID		:=	STALKERD01
+CONTENTID	:=	UP0001-$(APPID)_00-0000000000000000
 
-CFILES      := $(foreach dir,$(SOURCES), $(wildcard $(dir)/*.c))
-CPPFILES    := $(foreach dir,$(SOURCES), $(wildcard $(dir)/*.cpp))
-SFILES      := $(foreach dir,$(SOURCES), $(wildcard $(dir)/*.s))
-BINFILES    := $(foreach dir,$(DATA), $(wildcard $(dir)/*.bin))
+#---------------------------------------------------------------------------------
+# options for code generation
+#---------------------------------------------------------------------------------
+CFLAGS		=	-O2 -Wall -mcpu=cell $(MACHDEP) $(INCLUDE)
+CXXFLAGS	=	$(CFLAGS) -std=c++11
 
-OBJS        := $(CFILES:.c=.o) $(CPPFILES:.cpp=.o) $(SFILES:.s=.o) $(BINFILES:.bin=.o)
+LDFLAGS		=	$(MACHDEP) -Wl,-Map,$(notdir $@).map
 
-CFLAGS      := -O2 -Wall -mcpu=cell $(MACHDEP) $(LIBPSL1GHT_INC) -I$(PORTLIBS)/include -I$(INCLUDES)
-CXXFLAGS    := $(CFLAGS) -std=c++11
-LDFLAGS     := -L$(PORTLIBS)/lib -L$(PSL1GHT)/ppu/lib -L$(PS3DEV)/ppu/lib
-LIBS        := -ltiny3d -lfont -lfreetype -lgcm_sys -lrsx -lsysutil -lio -lsysmodule -lm
+#---------------------------------------------------------------------------------
+# any extra libraries we wish to link with the project
+#---------------------------------------------------------------------------------
+LIBS	:=	-ltiny3d -lfont -lfreetype -lrsx -lgcm_sys -lio -lsysutil -lsysmodule -lm
 
-TARGET      := $(APPID)
-ELF         := $(TARGET).elf
-SELF        := EBOOT.BIN
-PKG         := stalker_demo.pkg
+#---------------------------------------------------------------------------------
+# list of directories containing libraries, this must be the top level containing
+# include and lib
+#---------------------------------------------------------------------------------
+LIBDIRS	:=
 
-all: $(SELF) pkg
+#---------------------------------------------------------------------------------
+ifneq ($(BUILD),$(notdir $(CURDIR)))
+#---------------------------------------------------------------------------------
 
-$(ELF): $(OBJS)
-	$(CXX) -o $@ $^ $(LDFLAGS) $(LIBS)
+export OUTPUT	:=	$(CURDIR)/$(TARGET)
+export VPATH	:=	$(foreach dir,$(SOURCES),$(CURDIR)/$(dir)) \
+					$(foreach dir,$(DATA),$(CURDIR)/$(dir))
+export DEPSDIR	:=	$(CURDIR)/$(BUILD)
+export BUILDDIR	:=	$(CURDIR)/$(BUILD)
 
-$(SELF): $(ELF)
-	$(SELFTOOL) --sfo-app-version 01.00 --sfo-title "$(TITLE)" -e $< $@
+CFILES		:=	$(foreach dir,$(SOURCES),$(notdir $(wildcard $(dir)/*.c)))
+CPPFILES	:=	$(foreach dir,$(SOURCES),$(notdir $(wildcard $(dir)/*.cpp)))
+sFILES		:=	$(foreach dir,$(SOURCES),$(notdir $(wildcard $(dir)/*.s)))
+SFILES		:=	$(foreach dir,$(SOURCES),$(notdir $(wildcard $(dir)/*.S)))
+BINFILES	:=	$(foreach dir,$(DATA),$(notdir $(wildcard $(dir)/*.*)))
 
-pkg: $(SELF)
-	@mkdir -p pkgfiles/USRDIR
-	@cp $(SELF) pkgfiles/USRDIR/EBOOT.BIN
-	@cp pkgfiles/ICON0.PNG pkgfiles/ 2>/dev/null || true
-	@cp pkgfiles/PARAM.SFO pkgfiles/ 2>/dev/null || true
-	@echo "Building PKG $(PKG)..."
-	@$(PS3DEV)/bin/pkg.py --contentid $(CONTENTID) pkgfiles/ $(PKG) || \
-	 $(SELFTOOL) --pkg pkgfiles $(PKG) || \
-	 echo "pkg.py not found, используй make_self_npdrm"
-	@echo "PKG готов: $(PKG)"
+ifeq ($(strip $(CPPFILES)),)
+	export LD	:=	$(CC)
+else
+	export LD	:=	$(CXX)
+endif
+
+export OFILES	:=	$(addsuffix .o,$(BINFILES)) \
+					$(CPPFILES:.cpp=.o) $(CFILES:.c=.o) \
+					$(sFILES:.s=.o) $(SFILES:.S=.o)
+
+export INCLUDE	:=	$(foreach dir,$(INCLUDES), -I$(CURDIR)/$(dir)) \
+					$(foreach dir,$(LIBDIRS),-I$(dir)/include) \
+					$(LIBPSL1GHT_INC) \
+					-I$(CURDIR)/$(BUILD)
+
+export LIBPATHS	:=	$(foreach dir,$(LIBDIRS),-L$(dir)/lib) \
+					$(LIBPSL1GHT_LIB) -L$(PORTLIBS)/lib
+
+export OUTPUT	:=	$(CURDIR)/$(TARGET)
+.PHONY: $(BUILD) clean
+
+$(BUILD):
+	@[ -d $@ ] || mkdir -p $@
+	@$(MAKE) --no-print-directory -C $(BUILD) -f $(CURDIR)/Makefile
 
 clean:
-	rm -f $(OBJS) $(ELF) $(SELF) $(PKG)
-	rm -rf pkgfiles/USRDIR/EBOOT.BIN
+	@echo clean ...
+	@rm -fr $(BUILD) $(OUTPUT).elf $(OUTPUT).self $(OUTPUT).pkg
 
-run: $(SELF)
-	ps3load $(SELF)
+pkg: $(BUILD) $(OUTPUT).pkg
 
-.PHONY: all clean pkg run
+else
+
+DEPENDS	:=	$(OFILES:.o=.d)
+
+$(OUTPUT).self: $(OUTPUT).elf
+$(OUTPUT).elf:	$(OFILES)
+
+%.bin.o	:	%.bin
+	@echo $(notdir $<)
+	@$(bin2o)
+
+-include $(DEPENDS)
+
+endif

@@ -24,24 +24,34 @@ jobs:
           if [ -d /tmp/ps3dev_extract/ps3dev ]; then sudo cp -a /tmp/ps3dev_extract/ps3dev/* /usr/local/ps3dev/; else sudo cp -a /tmp/ps3dev_extract/* /usr/local/ps3dev/; fi
           ls -lh /usr/local/ps3dev
 
+      - name: Checkout RSXGL
+        uses: actions/checkout@v4
+        with:
+          repository: ps3dev/RSXGL
+          path: /tmp/RSXGL
+
       - name: Build RSXGL
         run: |
           export PS3DEV=/usr/local/ps3dev
           export PSL1GHT=$PS3DEV
           export PATH=$PS3DEV/bin:$PS3DEV/ppu/bin:$PS3DEV/spu/bin:$PATH
-          git clone https://github.com/ps3dev/RSXGL.git /tmp/RSXGL
           cd /tmp/RSXGL
           make -j$(nproc)
           sudo make install
           ls -lh /usr/local/ps3dev/portlibs/ppu/lib/libRSXGL* || ls -lh /usr/local/ps3dev/lib/*RSXGL* || echo "RSXGL not found list"
           find /usr/local/ps3dev -name "*RSXGL*" | head -n 20
 
+      - name: Checkout raylib-ps3
+        uses: actions/checkout@v4
+        with:
+          repository: nbe1233/raylib-ps3
+          path: /tmp/raylib-ps3
+
       - name: Build raylib for PS3
         run: |
           export PS3DEV=/usr/local/ps3dev
           export PSL1GHT=$PS3DEV
           export PATH=$PS3DEV/bin:$PS3DEV/ppu/bin:$PS3DEV/spu/bin:$PATH
-          git clone https://github.com/nbe1233/raylib-ps3.git /tmp/raylib-ps3
           cd /tmp/raylib-ps3/src
           make PLATFORM=PLATFORM_PSL1GHT -j$(nproc)
           sudo cp libraylib.a /usr/local/ps3dev/portlibs/ppu/lib/

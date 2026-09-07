@@ -17,20 +17,41 @@ jobs:
       - name: Download ps3dev prebuilt
         run: |
           wget -q https://github.com/ps3dev/ps3dev/releases/download/nightly-2026-07-26/ps3dev-linux-X64.tar.gz -O /tmp/ps3dev.tar.gz
+          rm -rf /tmp/ps3dev_extract
+          mkdir -p /tmp/ps3dev_extract
+          tar -xzf /tmp/ps3dev.tar.gz -C /tmp/ps3dev_extract
+          echo "=== extracted top ==="
+          ls -l /tmp/ps3dev_extract
+          echo "=== find ppu-types.h ==="
+          find /tmp/ps3dev_extract -name "ppu-types.h" 2>/dev/null | head -n 5
+          echo "=== tree ==="
+          ls -R /tmp/ps3dev_extract | head -n 100
           sudo mkdir -p /usr/local/ps3dev
-          sudo tar -xzf /tmp/ps3dev.tar.gz -C /usr/local/ps3dev --strip-components=1 || sudo tar -xzf /tmp/ps3dev.tar.gz -C /usr/local/
+          # tar contains either ps3dev/ or direct files - handle both
+          if [ -d /tmp/ps3dev_extract/ps3dev ]; then sudo cp -a /tmp/ps3dev_extract/ps3dev/* /usr/local/ps3dev/; else sudo cp -a /tmp/ps3dev_extract/* /usr/local/ps3dev/; fi
           ls -lh /usr/local/ps3dev
-          /usr/local/ps3dev/bin/ppu-gcc --version || /usr/local/ps3dev/ppu/bin/ppu-gcc --version || echo "ppu-gcc not found, listing"
-          ls -R /usr/local/ps3dev | head -n 50
+          ls -lh /usr/local/ps3dev/include 2>&1 | head -n 20
+          ls -lh /usr/local/ps3dev/ppu 2>&1 | head -n 20
+          find /usr/local/ps3dev -name "ppu-types.h" | head -n 5
 
       - name: Build PKG
         run: |
           export PS3DEV=/usr/local/ps3dev
           export PSL1GHT=$PS3DEV
+          # portlibs location varies
+          if [ -d $PS3DEV/portlibs/ppu ]; then export PORTLIBS=$PS3DEV/portlibs/ppu; else export PORTLIBS=$PS3DEV/portlibs; fi
           export PATH=$PS3DEV/bin:$PS3DEV/ppu/bin:$PS3DEV/spu/bin:$PATH
           echo "PS3DEV=$PS3DEV"
+          echo "PSL1GHT=$PSL1GHT"
+          echo "PORTLIBS=$PORTLIBS"
           echo "PATH=$PATH"
-          make -j$(nproc) pkg
+          # debug includes
+          ls $PSL1GHT/include/ppu-types.h 2>&1 || echo "no ppu-types in PSL1GHT/include"
+          ls $PS3DEV/include/ppu-types.h 2>&1 || echo "no ppu-types in PS3DEV/include"
+          # force include paths if needed
+          export CFLAGS="-I$PSL1GHT/include -I$PORTLIBS/include -I$PS3DEV/include"
+          export CXXFLAGS="$CFLAGS"
+          make -j$(nproc) pkg V=1
           ls -lh *.pkg *.elf EBOOT.BIN 2>&1 | head -n 20
 
       - name: Upload PKG

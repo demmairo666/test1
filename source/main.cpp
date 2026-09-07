@@ -5,16 +5,10 @@
 #include <sysutil/sysutil.h>
 #include <math.h>
 #include <string.h>
-#include <stdio.h>
-#include <stdlib.h>
-
-#include "camera.h"
-#include "level.h"
-#include "weapon.h"
 
 SYS_PROCESS_PARAM(1001, 0x10000)
 
-static bool running = true;
+static volatile bool running = true;
 
 static void sysCallback(u64 status, u64 param, void *usrdata) {
     (void)param; (void)usrdata;
@@ -23,18 +17,17 @@ static void sysCallback(u64 status, u64 param, void *usrdata) {
 
 int main() {
     sysUtilRegisterCallback(SYSUTIL_EVENT_SLOT0, sysCallback, NULL);
-    tiny3d_Init(1024*1024);
+    // init tiny3d first, pad second - order matters for some firmwares
+    s32 ret = tiny3d_Init(1024*1024);
+    if(ret < 0) {
+        // if tiny3d fails, just exit to XMB
+        sysProcessExit(1);
+    }
     ioPadInit(7);
-
-    Camera cam;
-    Level level;
-    Weapon weapon;
 
     padInfo padinfo;
     padData paddata;
-
-    float moveSpeed = 0.08f;
-    float lookSpeed = 0.04f;
+    float hue = 0;
 
     while(running) {
         sysUtilCheckCallback();
@@ -42,50 +35,36 @@ int main() {
         for(int i=0;i<MAX_PADS;i++){
             if(padinfo.status[i]){
                 ioPadGetData(i, &paddata);
-                float lx = (paddata.ANA_L_H - 128)/128.0f;
-                float ly = (paddata.ANA_L_V - 128)/128.0f;
-                float rx = (paddata.ANA_R_H - 128)/128.0f;
-                float ry = (paddata.ANA_R_V - 128)/128.0f;
-                if(fabs(lx) < 0.15f) lx=0;
-                if(fabs(ly) < 0.15f) ly=0;
-                if(fabs(rx) < 0.15f) rx=0;
-                if(fabs(ry) < 0.15f) ry=0;
-                cam.move(-ly * moveSpeed, lx * moveSpeed);
-                cam.addYaw(rx * lookSpeed);
-                cam.addPitch(-ry * lookSpeed);
-                if(paddata.BTN_TRIANGLE) weapon.flashlightOn = !weapon.flashlightOn;
-                if(paddata.BTN_SQUARE) weapon.shoot();
-                if(paddata.BTN_CROSS) weapon.reload();
+                if(paddata.BTN_SELECT || paddata.BTN_START) {} // avoid immediate exit
+                // SELECT = exit to XMB for test
                 if(paddata.BTN_SELECT) running = false;
-                if(paddata.BTN_START) {} // pause
             }
         }
 
-        level.update();
-        weapon.update();
+        // simple animated clear to prove we stay in game
+        hue += 0.01f;
+        u8 r = (u8)( 10 + 30 * fabs(sin(hue)) );
+        u8 g = (u8)( 10 + 10 * fabs(sin(hue*1.3f)) );
+        u8 b = (u8)( 18 + 20 * fabs(sin(hue*0.7f)) );
+        u32 col = (0xff<<24) | (r<<16) | (g<<8) | b;
 
-        tiny3d_Clear(0xff0a0a12, TINY3D_CLEAR_ALL);
-        tiny3d_Project3D();
-        cam.applyTransform();
-        level.draw();
+        tiny3d_Clear(col, TINY3D_CLEAR_ALL);
 
+        // draw a simple 2D quad in center - if you see it, 2D works
         tiny3d_Project2D();
-        if(weapon.flashlightOn) {
-            tiny3d_SetPolygon(TINY3D_QUADS);
-            tiny3d_VertexPos(400, 200, 0); tiny3d_VertexColor(0x10222211);
-            tiny3d_VertexPos(880, 200, 0); tiny3d_VertexColor(0x10222211);
-            tiny3d_VertexPos(880, 520, 0); tiny3d_VertexColor(0x10222211);
-            tiny3d_VertexPos(400, 520, 0); tiny3d_VertexColor(0x10222211);
-            tiny3d_End();
-        }
-        weapon.draw2D();
-        // simple HUD without libfont - colored bar for ammo
         tiny3d_SetPolygon(TINY3D_QUADS);
-        float w = 200.0f * weapon.ammo / (float)weapon.maxAmmo;
-        tiny3d_VertexPos(20, 20, 0); tiny3d_VertexColor(0xFF00FF00);
-        tiny3d_VertexPos(20+w, 20, 0); tiny3d_VertexColor(0xFF00FF00);
-        tiny3d_VertexPos(20+w, 30, 0); tiny3d_VertexColor(0xFF00FF00);
-        tiny3d_VertexPos(20, 30, 0); tiny3d_VertexColor(0xFF00FF00);
+        tiny3d_VertexPos(500, 300, 0); tiny3d_VertexColor(0xFF00FF00);
+        tiny3d_VertexPos(780, 300, 0); tiny3d_VertexColor(0xFF00FF00);
+        tiny3d_VertexPos(780, 420, 0); tiny3d_VertexColor(0xFF00FF00);
+        tiny3d_VertexPos(500, 420, 0); tiny3d_VertexColor(0xFF00FF00);
+        tiny3d_End();
+
+        // second quad - weapon placeholder
+        tiny3d_SetPolygon(TINY3D_QUADS);
+        tiny3d_VertexPos(700, 600, 0); tiny3d_VertexColor(0xFF404040);
+        tiny3d_VertexPos(900, 600, 0); tiny3d_VertexColor(0xFF404040);
+        tiny3d_VertexPos(900, 650, 0); tiny3d_VertexColor(0xFF404040);
+        tiny3d_VertexPos(700, 650, 0); tiny3d_VertexColor(0xFF404040);
         tiny3d_End();
 
         tiny3d_Flip();

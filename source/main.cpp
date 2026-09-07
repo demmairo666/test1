@@ -1,4 +1,5 @@
 #include <raylib.h>
+#include <math.h>
 
 int main(void){
     InitWindow(1280,720,"STALKER PS3 raylib");
@@ -17,7 +18,7 @@ int main(void){
             if(fabs(ly)<0.15f) ly=0;
             if(fabs(rx)<0.15f) rx=0;
             px += lx*2;
-            if(IsGamepadButtonPressed(0, GAMEPAD_BUTTON_RIGHT_FACE_RIGHT)) flashlight: light=!light;
+            if(IsGamepadButtonPressed(0, GAMEPAD_BUTTON_RIGHT_FACE_RIGHT)) light=!light;
             if(IsGamepadButtonPressed(0, GAMEPAD_BUTTON_RIGHT_FACE_DOWN)) ammo=30;
             if(IsGamepadButtonPressed(0, GAMEPAD_BUTTON_RIGHT_FACE_LEFT)) { if(ammo>0){ ammo--; flash=true; ft=6; } }
             if(IsGamepadButtonPressed(0, GAMEPAD_BUTTON_MIDDLE_RIGHT)) break;

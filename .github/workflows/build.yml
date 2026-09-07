@@ -6,30 +6,36 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
-    container: ps3dev/ps3dev:latest
+    runs-on: ubuntu-22.04
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Install deps
+        run: sudo apt-get update && sudo apt-get install -y wget tar make python3
+
+      - name: Download ps3dev prebuilt
+        run: |
+          wget -q https://github.com/ps3dev/ps3dev/releases/download/nightly-2026-07-26/ps3dev-linux-X64.tar.gz -O /tmp/ps3dev.tar.gz
+          sudo mkdir -p /usr/local/ps3dev
+          sudo tar -xzf /tmp/ps3dev.tar.gz -C /usr/local/ps3dev --strip-components=1 || sudo tar -xzf /tmp/ps3dev.tar.gz -C /usr/local/
+          ls -lh /usr/local/ps3dev
+          /usr/local/ps3dev/bin/ppu-gcc --version || /usr/local/ps3dev/ppu/bin/ppu-gcc --version || echo "ppu-gcc not found, listing"
+          ls -R /usr/local/ps3dev | head -n 50
+
       - name: Build PKG
         run: |
-          echo "PSL1GHT=$PSL1GHT"
-          echo "ps3dev=$PS3DEV"
+          export PS3DEV=/usr/local/ps3dev
+          export PSL1GHT=$PS3DEV
+          export PATH=$PS3DEV/bin:$PS3DEV/ppu/bin:$PS3DEV/spu/bin:$PATH
+          echo "PS3DEV=$PS3DEV"
+          echo "PATH=$PATH"
           make -j$(nproc) pkg
-          ls -lh *.pkg || ls -lh *.elf || true
-          ls -lh EBOOT.BIN || true
+          ls -lh *.pkg *.elf EBOOT.BIN 2>&1 | head -n 20
 
-      - name: Upload PKG artifact
+      - name: Upload PKG
         uses: actions/upload-artifact@v4
         with:
           name: stalker_demo-ps3-pkg
           path: stalker_demo.pkg
           if-no-files-found: error
-
-      - name: Upload ELF for RPCS3
-        uses: actions/upload-artifact@v4
-        with:
-          name: stalker_demo-elf
-          path: "*.elf"
-          if-no-files-found: warn

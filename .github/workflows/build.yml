@@ -54,5 +54,5 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: stalker_demo-ps3-pkg
-          path: stalker_demo.pkg
+          path: "*.pkg"
           if-no-files-found: error

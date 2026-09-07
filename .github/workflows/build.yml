@@ -27,7 +27,7 @@ jobs:
       - name: Checkout RSXGL
         uses: actions/checkout@v4
         with:
-          repository: ps3dev/RSXGL
+          repository: gzorin/RSXGL
           path: RSXGL
 
       - name: Build RSXGL
@@ -36,10 +36,14 @@ jobs:
           export PSL1GHT=$PS3DEV
           export PATH=$PS3DEV/bin:$PS3DEV/ppu/bin:$PS3DEV/spu/bin:$PATH
           cd RSXGL
-          make -j$(nproc)
-          sudo make install
-          ls -lh /usr/local/ps3dev/portlibs/ppu/lib/libRSXGL* || ls -lh /usr/local/ps3dev/lib/*RSXGL* || echo "RSXGL not found list"
-          find /usr/local/ps3dev -name "*RSXGL*" | head -n 20
+          # RSXGL uses autotools - configure then make
+          if [ -f configure ]; then chmod +x configure; ./configure --with-ppu-prefix=$PS3DEV/portlibs/ppu || cat config.log; fi
+          make -j$(nproc) || make
+          sudo make install || sudo make install -k
+          ls -lh /usr/local/ps3dev/portlibs/ppu/lib/libRSXGL* 2>&1 | head -n 20
+          ls -lh /usr/local/ps3dev/lib/*RSXGL* 2>&1 | head -n 20
+          find /usr/local/ps3dev -name "*RSXGL*" 2>&1 | head -n 20
+          find . -name "*.a" | head -n 20
 
       - name: Checkout raylib-ps3
         uses: actions/checkout@v4

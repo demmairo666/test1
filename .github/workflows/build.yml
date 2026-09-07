@@ -58,6 +58,7 @@ jobs:
 
       - name: Build raylib for PS3
         run: |
+          set -e
           export PS3DEV=/usr/local/ps3dev
           export PSL1GHT=$PS3DEV
           export PATH=$PS3DEV/bin:$PS3DEV/ppu/bin:$PS3DEV/spu/bin:$PATH
@@ -67,9 +68,11 @@ jobs:
           make PLATFORM=PLATFORM_PSL1GHT -j$(nproc) 2>&1 | tail -n 100
           echo "=== raylib build done ==="
           ls -lh libraylib* 2>&1 | head -n 20
-          sudo cp libraylib.a /usr/local/ps3dev/portlibs/ppu/lib/ 2>&1 | head -n 20
-          sudo cp raylib.h /usr/local/ps3dev/portlibs/ppu/include/ 2>&1 | head -n 20
-          sudo cp raymath.h /usr/local/ps3dev/portlibs/ppu/include/ 2>&1 | head -n 20 || true
+          test -f libraylib.a || (echo "libraylib.a not built!"; exit 1)
+          sudo cp -v libraylib.a /usr/local/ps3dev/portlibs/ppu/lib/
+          sudo cp -v libraylib.a /usr/local/ps3dev/ppu/lib/ || true
+          sudo cp -v raylib.h /usr/local/ps3dev/portlibs/ppu/include/
+          sudo cp -v raymath.h /usr/local/ps3dev/portlibs/ppu/include/ 2>&1 | head -n 20 || true
           ls -lh /usr/local/ps3dev/portlibs/ppu/lib/libraylib* 2>&1 | head -n 20
           ls -lh /usr/local/ps3dev/ppu/lib/libraylib* 2>&1 | head -n 20
           find /usr/local/ps3dev -name "*raylib*" 2>&1 | head -n 20

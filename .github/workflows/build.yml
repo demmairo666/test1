@@ -38,21 +38,17 @@ jobs:
         run: |
           export PS3DEV=/usr/local/ps3dev
           export PSL1GHT=$PS3DEV
-          # portlibs location varies
-          if [ -d $PS3DEV/portlibs/ppu ]; then export PORTLIBS=$PS3DEV/portlibs/ppu; else export PORTLIBS=$PS3DEV/portlibs; fi
           export PATH=$PS3DEV/bin:$PS3DEV/ppu/bin:$PS3DEV/spu/bin:$PATH
           echo "PS3DEV=$PS3DEV"
           echo "PSL1GHT=$PSL1GHT"
           echo "PORTLIBS=$PORTLIBS"
           echo "PATH=$PATH"
-          # debug includes
-          ls $PSL1GHT/include/ppu-types.h 2>&1 || echo "no ppu-types in PSL1GHT/include"
-          ls $PS3DEV/include/ppu-types.h 2>&1 || echo "no ppu-types in PS3DEV/include"
-          # force include paths if needed
-          export CFLAGS="-I$PSL1GHT/include -I$PORTLIBS/include -I$PS3DEV/include"
-          export CXXFLAGS="$CFLAGS"
-          make -j$(nproc) pkg V=1
-          ls -lh *.pkg *.elf EBOOT.BIN 2>&1 | head -n 20
+          ls $PSL1GHT/ppu/include/ppu-types.h && echo "found ppu-types.h at ppu/include"
+          ls $PSL1GHT/ppu/include/tiny3d.h && echo "found tiny3d.h"
+          make -j$(nproc) V=1
+          ls -lh *.elf *.self EBOOT.BIN 2>&1 | head -n 20
+          make pkg V=1
+          ls -lh *.pkg 2>&1 | head -n 20
 
       - name: Upload PKG
         uses: actions/upload-artifact@v4

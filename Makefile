@@ -18,7 +18,7 @@ include $(PSL1GHT)/ppu_rules
 TARGET		:=	STALKERD01
 BUILD		:=	build
 SOURCES		:=	source
-DATA		:=	data
+DATA		:=
 INCLUDES	:=	include
 
 TITLE		:=	STALKER PS3 Demo Extended

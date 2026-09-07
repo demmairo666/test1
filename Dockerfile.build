@@ -1,0 +1,4 @@
+FROM ps3dev/ps3dev:latest
+WORKDIR /src
+COPY . .
+RUN make -j4 pkg

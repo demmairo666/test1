@@ -61,13 +61,16 @@ jobs:
           export PS3DEV=/usr/local/ps3dev
           export PSL1GHT=$PS3DEV
           export PATH=$PS3DEV/bin:$PS3DEV/ppu/bin:$PS3DEV/spu/bin:$PATH
+          ls -R raylib-ps3/src/external 2>&1 | head -n 80
+          ls -lh raylib-ps3/src/external/khronos/KHR/ 2>&1 | head -n 20
+          ls -lh raylib-ps3/src/external/khronos/ 2>&1 | head -n 20
           cd raylib-ps3/src
-          make PLATFORM=PLATFORM_PSL1GHT -j$(nproc)
-          sudo cp libraylib.a /usr/local/ps3dev/portlibs/ppu/lib/
-          sudo cp raylib.h /usr/local/ps3dev/portlibs/ppu/include/
+          make PLATFORM=PLATFORM_PSL1GHT -j$(nproc) CUSTOM_CFLAGS="-I./external/khronos -I./external" 2>&1 | tail -n 100
+          sudo cp libraylib.a /usr/local/ps3dev/portlibs/ppu/lib/ || echo "no lib"
+          sudo cp raylib.h /usr/local/ps3dev/portlibs/ppu/include/ || echo "no header"
           sudo cp raymath.h /usr/local/ps3dev/portlibs/ppu/include/ || true
-          ls -lh /usr/local/ps3dev/portlibs/ppu/lib/libraylib.a
-          ls -lh /usr/local/ps3dev/portlibs/ppu/include/raylib.h
+          ls -lh /usr/local/ps3dev/portlibs/ppu/lib/libraylib.a 2>&1 | head -n 5
+          ls -lh /usr/local/ps3dev/portlibs/ppu/include/raylib.h 2>&1 | head -n 5
 
       - name: Build PKG
         run: |

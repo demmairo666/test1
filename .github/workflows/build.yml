@@ -12,7 +12,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Install deps
-        run: sudo apt-get update && sudo apt-get install -y wget tar make python3 git autoconf automake bison flex libtool pkg-config
+        run: sudo apt-get update && sudo apt-get install -y wget tar make python3
 
       - name: Download ps3dev prebuilt
         run: |
@@ -22,87 +22,16 @@ jobs:
           tar -xzf /tmp/ps3dev.tar.gz -C /tmp/ps3dev_extract
           sudo mkdir -p /usr/local/ps3dev
           if [ -d /tmp/ps3dev_extract/ps3dev ]; then sudo cp -a /tmp/ps3dev_extract/ps3dev/* /usr/local/ps3dev/; else sudo cp -a /tmp/ps3dev_extract/* /usr/local/ps3dev/; fi
-          ls -lh /usr/local/ps3dev
-
-      - name: Checkout RSXGL
-        uses: actions/checkout@v4
-        with:
-          repository: gzorin/RSXGL
-          path: RSXGL
-
-      - name: Build RSXGL
-        run: |
-          export PS3DEV=/usr/local/ps3dev
-          export PSL1GHT=$PS3DEV
-          export PATH=$PS3DEV/bin:$PS3DEV/ppu/bin:$PS3DEV/spu/bin:$PATH
-          cd RSXGL
-          ls -la | head -n 30
-          cat README* 2>&1 | head -n 40
-          if [ -f autogen.sh ]; then chmod +x autogen.sh; ./autogen.sh 2>&1 | head -n 50; fi
-          if [ ! -f configure ] && [ -f configure.ac ]; then autoreconf -ivf 2>&1 | head -n 50; fi
-          ls -la configure* 2>&1 | head -n 20
-          if [ -f configure ]; then chmod +x configure; ./configure --with-ppu-prefix=$PS3DEV/portlibs/ppu 2>&1 | tail -n 50; cat config.log 2>&1 | tail -n 100; fi
-          ls -la Makefile 2>&1 | head -n 20
-          make -j$(nproc) 2>&1 | tail -n 100 || make 2>&1 | tail -n 100
-          sudo make install 2>&1 | tail -n 50 || sudo make install -k 2>&1 | tail -n 50
-          ls -lh /usr/local/ps3dev/portlibs/ppu/lib/libRSXGL* 2>&1 | head -n 20
-          find /usr/local/ps3dev -name "*RSXGL*" 2>&1 | head -n 20
-          find . -name "*.a" | head -n 20
-
-      - name: Checkout raylib-ps3
-        uses: actions/checkout@v4
-        with:
-          repository: nbe1233/raylib-ps3
-          path: raylib-ps3
-          submodules: recursive
-
-      - name: Build raylib for PS3
-        run: |
-          set -e
-          export PS3DEV=/usr/local/ps3dev
-          export PSL1GHT=$PS3DEV
-          export PATH=$PS3DEV/bin:$PS3DEV/ppu/bin:$PS3DEV/spu/bin:$PATH
-          ls -R raylib-ps3/src/external 2>&1 | head -n 80
-          ls -lh raylib-ps3/src/external/khronos/ 2>&1 | head -n 20
-          # fix missing KHR headers in fork - fetch from upstream raylib or use portlibs
-          if [ ! -f raylib-ps3/src/external/khronos/KHR/khrplatform.h ]; then
-            echo "KHR missing, trying to fetch"
-            mkdir -p raylib-ps3/src/external/khronos/KHR
-            # try portlibs first
-            if [ -f /usr/local/ps3dev/portlibs/ppu/include/KHR/khrplatform.h ]; then
-              cp -v /usr/local/ps3dev/portlibs/ppu/include/KHR/khrplatform.h raylib-ps3/src/external/khronos/KHR/
-            else
-              curl -L https://raw.githubusercontent.com/raysan5/raylib/master/src/external/khronos/KHR/khrplatform.h -o raylib-ps3/src/external/khronos/KHR/khrplatform.h 2>&1 | head -n 20 || echo "curl failed"
-              # fallback: create minimal stub
-              if [ ! -f raylib-ps3/src/external/khronos/KHR/khrplatform.h ]; then
-                echo "creating stub khrplatform.h"
-                printf "#ifndef KHRPLATFORM_H\n#define KHRPLATFORM_H\ntypedef char khronos_int8_t;\ntypedef unsigned char khronos_uint8_t;\ntypedef short khronos_int16_t;\ntypedef unsigned short khronos_uint16_t;\ntypedef int khronos_int32_t;\ntypedef unsigned int khronos_uint32_t;\ntypedef long long khronos_int64_t;\ntypedef unsigned long long khronos_uint64_t;\ntypedef float khronos_float_t;\n#endif\n" > raylib-ps3/src/external/khronos/KHR/khrplatform.h
-              fi
-            fi
-            ls -lh raylib-ps3/src/external/khronos/KHR/ 2>&1 | head -n 20
-          fi
-          cd raylib-ps3/src
-          make PLATFORM=PLATFORM_PSL1GHT -j$(nproc) 2>&1 | tail -n 100
-          echo "=== raylib build done ==="
-          ls -lh libraylib* 2>&1 | head -n 20
-          test -f libraylib.a || (echo "libraylib.a not built!"; exit 1)
-          sudo cp -v libraylib.a /usr/local/ps3dev/portlibs/ppu/lib/
-          sudo cp -v libraylib.a /usr/local/ps3dev/ppu/lib/ || true
-          sudo cp -v raylib.h /usr/local/ps3dev/portlibs/ppu/include/
-          sudo cp -v raymath.h /usr/local/ps3dev/portlibs/ppu/include/ 2>&1 | head -n 20 || true
-          ls -lh /usr/local/ps3dev/portlibs/ppu/lib/libraylib* 2>&1 | head -n 20
-          ls -lh /usr/local/ps3dev/ppu/lib/libraylib* 2>&1 | head -n 20
-          find /usr/local/ps3dev -name "*raylib*" 2>&1 | head -n 20
-          ls -lh /usr/local/ps3dev/portlibs/ppu/lib/ 2>&1 | head -n 30
+          ls -lh /usr/local/ps3dev | head -n 20
 
       - name: Build PKG
         run: |
           export PS3DEV=/usr/local/ps3dev
           export PSL1GHT=$PS3DEV
           export PATH=$PS3DEV/bin:$PS3DEV/ppu/bin:$PS3DEV/spu/bin:$PATH
-          make -j$(nproc) V=1
-          ls -lh *.elf *.self 2>&1 | head -n 20
-          make pkg V=1
+          make -j$(nproc) V=1 2>&1 | tail -n 200
+          ls -lh *.elf *.self *.pkg 2>&1 | head -n 30
+          make pkg V=1 2>&1 | tail -n 100
           ls -lh *.pkg 2>&1 | head -n 20
 
       - name: Upload PKG

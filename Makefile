@@ -36,7 +36,7 @@ LDFLAGS		=	$(MACHDEP) -Wl,-Map,$(notdir $@).map
 #---------------------------------------------------------------------------------
 # any extra libraries we wish to link with the project
 #---------------------------------------------------------------------------------
-LIBS	:=	-ltiny3d -lfont -lfreetype -lrsx -lgcm_sys -lio -lsysutil -lsysmodule -lm
+LIBS	:=	-lSDL2 -lrsx -lgcm_sys -lio -lsysutil -lsysmodule -lm
 
 #---------------------------------------------------------------------------------
 # list of directories containing libraries, this must be the top level containing
